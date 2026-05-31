@@ -32,11 +32,19 @@ jobs:
       - name: Docker login
         run: echo "${{ secrets.DOCKER_TOKEN }}" | docker login registry.test.relizahub.com -u "${{ secrets.DOCKER_LOGIN }}" --password-stdin
 
-      - name: Compute version + metadata
+      - name: Compute version + commit metadata
         id: meta
         run: |
           echo "version=1.0.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
           echo "vcsuri=${{ github.server_url }}/${{ github.repository }}" >> "$GITHUB_OUTPUT"
+          # Commit metadata for the SCE (message/author/email/date) — without these
+          # the Source Code Entry renders empty Date/Message/Author columns.
+          {
+            echo "commit_message=$(git log -1 --pretty=%s)"
+            echo "commit_author=$(git log -1 --pretty=%an)"
+            echo "commit_email=$(git log -1 --pretty=%ae)"
+            echo "commit_date=$(git log -1 --pretty=%cI)"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Build and push mafia-vue
         id: vue
@@ -79,6 +87,11 @@ jobs:
             --arg vcs "${{ steps.meta.outputs.vcsuri }}" \
             --arg commit "${{ github.sha }}" \
             --arg ver "${{ steps.meta.outputs.version }}" \
+            --arg msg "${{ steps.meta.outputs.commit_message }}" \
+            --arg author "${{ steps.meta.outputs.commit_author }}" \
+            --arg email "${{ steps.meta.outputs.commit_email }}" \
+            --arg cdate "${{ steps.meta.outputs.commit_date }}" \
+            --arg vbranch "${{ github.ref_name }}" \
             --arg vueImg "${{ steps.vue.outputs.image }}" \
             --arg vueDig "${{ steps.vue.outputs.digest }}" \
             --arg expImg "${{ steps.express.outputs.image }}" \
@@ -86,19 +99,19 @@ jobs:
             '[
               {
                 vcsUri: $vcs, repoPath: "mafia-vue", branch: "main", version: $ver, lifecycle: "ASSEMBLED",
-                sourceCodeEntry: { commit: $commit, uri: $vcs, type: "git",
+                sourceCodeEntry: { commit: $commit, uri: $vcs, type: "git", commitMessage: $msg, commitAuthor: $author, commitEmail: $email, dateActual: $cdate, vcsBranch: $vbranch,
                   artifacts: [ { displayIdentifier: "mafia-vue-source-sbom", type: "BOM", bomFormat: "CYCLONEDX", filePath: "./vue.cdx.json" } ] },
                 outboundDeliverables: [ { displayIdentifier: $vueImg, type: "CONTAINER", softwareMetadata: { packageType: "CONTAINER", digests: [ $vueDig ] } } ]
               },
               {
                 vcsUri: $vcs, repoPath: "mafia-express", branch: "main", version: $ver, lifecycle: "ASSEMBLED",
-                sourceCodeEntry: { commit: $commit, uri: $vcs, type: "git",
+                sourceCodeEntry: { commit: $commit, uri: $vcs, type: "git", commitMessage: $msg, commitAuthor: $author, commitEmail: $email, dateActual: $cdate, vcsBranch: $vbranch,
                   artifacts: [ { displayIdentifier: "mafia-express-source-sbom", type: "BOM", bomFormat: "CYCLONEDX", filePath: "./express.cdx.json" } ] },
                 outboundDeliverables: [ { displayIdentifier: $expImg, type: "CONTAINER", softwareMetadata: { packageType: "CONTAINER", digests: [ $expDig ] } } ]
               },
               {
                 vcsUri: $vcs, repoPath: "mafia-helm", branch: "main", version: $ver, lifecycle: "ASSEMBLED",
-                sourceCodeEntry: { commit: $commit, uri: $vcs, type: "git" }
+                sourceCodeEntry: { commit: $commit, uri: $vcs, type: "git", commitMessage: $msg, commitAuthor: $author, commitEmail: $email, dateActual: $cdate, vcsBranch: $vbranch }
               }
             ]' > batch.json
           echo "=== batch.json ===" && cat batch.json
