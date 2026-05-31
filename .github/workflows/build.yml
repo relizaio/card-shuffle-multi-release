@@ -111,11 +111,29 @@ jobs:
           rearm_api_url: ${{ env.REARM_API_URL }}
           infile: batch.json
 
-      - name: Show auto-integrated product release
+      - name: Verify the batch produced ONE product release covering all 3 components
         run: |
-          rearm getlatestrelease \
+          # The "mafia" product auto-integrates its 3 dependency components. Because
+          # add-multi-release dedupes auto-integrate per feature set, the whole batch
+          # yields exactly ONE product release whose parentReleases reference all
+          # three component releases — not one product release per component.
+          rel=$(rearm getlatestrelease \
             -i "${{ secrets.REARM_API_ID }}" \
             -k "${{ secrets.REARM_API_KEY }}" \
             -u "${{ env.REARM_API_URL }}" \
             --component 782af254-b8f2-4c0d-b47e-1d8ba60d367a \
-            --branch main || echo "(getlatestrelease is informational; check the ReARM UI for the product release)"
+            --branch "Base Feature Set")
+          echo "Product release: $rel"
+          puuid=$(echo "$rel" | jq -r '.uuid // empty')
+          pver=$(echo "$rel" | jq -r '.version // empty')
+          parents=$(echo "$rel" | jq '(.parentReleases // []) | length')
+          echo "Latest product release uuid=$puuid version=$pver parentReleases=$parents"
+          if [ -z "$puuid" ]; then
+            echo "::error::No product release found on the mafia Base Feature Set after the batch." >&2
+            exit 1
+          fi
+          if [ "$parents" != "3" ]; then
+            echo "::error::Expected a single auto-integrated product release with 3 component parents, got $parents." >&2
+            exit 1
+          fi
+          echo "OK: single product release $puuid (v$pver) integrated all 3 component releases from this batch."
