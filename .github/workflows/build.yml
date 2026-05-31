@@ -88,13 +88,13 @@ jobs:
                 vcsUri: $vcs, repoPath: "mafia-vue", branch: "main", version: $ver, lifecycle: "ASSEMBLED",
                 sourceCodeEntry: { commit: $commit, uri: $vcs, type: "git",
                   artifacts: [ { displayIdentifier: "mafia-vue-source-sbom", type: "BOM", bomFormat: "CYCLONEDX", filePath: "./vue.cdx.json" } ] },
-                outboundDeliverables: [ { displayIdentifier: $vueImg, type: "CONTAINER", softwareMetadata: { packageType: "OCI", digests: [ $vueDig ] } } ]
+                outboundDeliverables: [ { displayIdentifier: $vueImg, type: "CONTAINER", softwareMetadata: { packageType: "CONTAINER", digests: [ $vueDig ] } } ]
               },
               {
                 vcsUri: $vcs, repoPath: "mafia-express", branch: "main", version: $ver, lifecycle: "ASSEMBLED",
                 sourceCodeEntry: { commit: $commit, uri: $vcs, type: "git",
                   artifacts: [ { displayIdentifier: "mafia-express-source-sbom", type: "BOM", bomFormat: "CYCLONEDX", filePath: "./express.cdx.json" } ] },
-                outboundDeliverables: [ { displayIdentifier: $expImg, type: "CONTAINER", softwareMetadata: { packageType: "OCI", digests: [ $expDig ] } } ]
+                outboundDeliverables: [ { displayIdentifier: $expImg, type: "CONTAINER", softwareMetadata: { packageType: "CONTAINER", digests: [ $expDig ] } } ]
               },
               {
                 vcsUri: $vcs, repoPath: "mafia-helm", branch: "main", version: $ver, lifecycle: "ASSEMBLED",
